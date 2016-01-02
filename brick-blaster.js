@@ -5,7 +5,7 @@
  *                       Tink - https://github.com/kittykatattack/tink
  * Author: kbmulligan
  * Date started: Dec 2015
- * Latest Edits: Jan 2016 
+ * Latest Edits: Jan 2016
  * Version: 0.5
  * digmshiphter@gmail.com
  * Twitter: n1t0r
@@ -87,10 +87,10 @@ var frames = 5;             // frames to use to calculate velocity
 var previousXPositions = new Array();
 
 // AI/Cheat
-var invincible = true;
+var invincible = false;
 
 // Config vars
-var debugMode = true,
+var debugMode = false,
     mouseControl = true,
     keyUpFriction = 0.0,
     fineDetectionRadius = ballRadius * 10;
@@ -104,6 +104,13 @@ var levelLabel = "level: ";
 //Create the renderer
 var renderer = PIXI.autoDetectRenderer(256, 256);
 // var renderer = PIXI.WebGLRenderer(256, 256);
+
+if (renderer.type == PIXI.WEBGL_RENDERER) {
+   console.log('Using WebGL...');
+} else {
+  console.log('Using Canvas...');
+};
+
 
 //Configure the renderer
 renderer.view.style.position = "absolute";
