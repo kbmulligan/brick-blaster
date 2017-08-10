@@ -105,7 +105,7 @@ var levelLabel = "level: ";
 var renderer = PIXI.autoDetectRenderer(256, 256);
 // var renderer = PIXI.WebGLRenderer(256, 256);
 
-if (renderer.type == PIXI.WEBGL_RENDERER) {
+if (renderer.type == PIXI.RENDERER_TYPE.WEBGL) {
    console.log('Using WebGL...');
 } else {
   console.log('Using Canvas...');
