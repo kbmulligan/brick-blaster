@@ -70,9 +70,27 @@ var blockLength = 50,
     blockWidth = 20,
     blockMargin = 5;
 
-var blocksAcross = 15,
-    blocksDeep = 4,
-    blocksTotal = blocksAcross * blocksDeep;
+var layout1 = [ 1,1,0,1,0,1,1,1,1,1,0,1,0,1,1,
+                1,0,1,1,1,1,0,1,0,1,1,1,1,0,1,
+                0,0,1,1,1,1,0,1,0,1,1,1,1,0,0,
+                1,1,0,1,0,1,1,1,1,1,0,1,0,1,1
+];
+
+var layout2 = [ 1,0,0,0,0,0,0,0,0,0,0,0,0,0,1,
+                0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+                0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,
+                1,0,0,0,0,0,0,1,0,0,0,0,0,0,1
+];
+
+var layout = {
+    blocksAcross: 15,
+    blocksDeep: 4,
+    blocksTotal: function() {
+        return this.blocksAcross * this.blocksDeep;
+    },
+    blocks: layout1 
+};
+
 
 // Games vars
 var state = pause,
@@ -212,13 +230,7 @@ keyEsc.press = function() {
     ;
 };
 keyEsc.release = function () {
-    if (state == play) {
-        pauseGame();
-    }
-
-    else if (state == pause) {
-        unPauseGame();
-    }
+    togglePause();
 };
 
 keySpace.press = function() {
@@ -293,6 +305,7 @@ function resetLevel (level) {
     resetBall();
     resetPaddle();
     resetBlocks(level);
+    draw();
 }
 
 function nextLevel (jump) {
@@ -327,8 +340,15 @@ var txtGameOver = new Text(
   {font: "bold 72px courier", fill: textColor}
 );
 
+var txtCredits = new Text(
+  "nitor",
+  {font: "bold 64px courier", fill: textColor}
+);
+
+
 txtGameOver.visible = false;
 txtPaused.visible = true;
+txtCredits.visible = false;
 
 txtScore.position.set(window.innerWidth - (txtScore.width * 1.4), txtScore.height * 0.1);
 txtLives.position.set(window.innerWidth*0.02, txtLives.height * 0.1);
@@ -347,6 +367,7 @@ stage.addChild(txtLives);
 stage.addChild(txtLevel);
 stage.addChild(txtPaused);
 stage.addChild(txtGameOver);
+stage.addChild(txtCredits);
 
 function makeRectangle (initx, inity, length, width, color) {
     var rectangle = new PIXI.Graphics();
@@ -390,15 +411,20 @@ function makeBall (initx, inity) {
     return ball;
 }
 
-function initSetupBlocks (blocks) {
+function initSetupBlocks (blocks, layout) {
+    
+    var blocksAcross = layout.blocksAcross;
+    var blocksDeep = layout.blocksDeep;
 
     var biasX = window.innerWidth/2 - (blocksAcross * (blockLength + blockMargin))/2;
     var biaxY = window.innerHeight * 0.1;
 
     for (var i = 0; i < blocksAcross; i++) {
         for (var j = 0; j < blocksDeep; j++) {
-            var newBlock = makeBlock(i * (blockMargin + blockLength) + biasX, j * (blockMargin + blockWidth) + biaxY)
-            blocks.push(newBlock);
+            if (layout.blocks[j*blocksAcross+i] == 1) {
+                var newBlock = makeBlock(i * (blockMargin + blockLength) + biasX, j * (blockMargin + blockWidth) + biaxY)
+                blocks.push(newBlock);
+            }
         }
     }
 
@@ -428,7 +454,7 @@ function changeBlocksColor (blocks, color) {
 
 // create blocks
 var blocks = new Array();
-initSetupBlocks(blocks);
+initSetupBlocks(blocks, layout);
 
 // create paddle
 var paddle = makePaddle(paddleStartX, paddleStartY);
@@ -500,6 +526,7 @@ function bounceObject (object) {
     }
 }
 
+// only used for paddle collision
 function ballRectCollision (ball, rectobj, length, width) {
     
     var collision = false;
@@ -509,7 +536,8 @@ function ballRectCollision (ball, rectobj, length, width) {
     if (ball.x + ballRadius > rectobj.x && 
         ball.x - ballRadius < rectobj.x + length && 
         ball.y + ballRadius > rectobj.y &&
-        ball.y - ballRadius < rectobj.y + width
+        ball.y - ballRadius < rectobj.y + width &&
+        Math.sign(ball.vy) == 1
         ) {
 
         collision = true;
@@ -528,7 +556,9 @@ function ballRectCollisionHorz (ball, rect, length, width) {
         ball.x < rect.x + length && 
         ball.y + ballRadius > rect.y && 
         ball.y - ballRadius < rect.y + width &&
-        (ball.y < rect.y || ball.y > rect.y + width)
+        ((ball.y < rect.y && Math.sign(ball.vy) == 1) 
+            || 
+        (ball.y > rect.y + width && Math.sign(ball.vy) == -1))
         ) {
 
         collision = true;
@@ -547,7 +577,9 @@ function ballRectCollisionVert (ball, rect, length, width) {
         ball.x - ballRadius < rect.x + length && 
         ball.y > rect.y && 
         ball.y < rect.y + width &&
-        (ball.x < rect.x || ball.x > rect.x + length)
+        ((ball.x < rect.x && Math.sign(ball.vx) == 1)
+        || 
+        (ball.x > rect.x + length && Math.sign(ball.vx) == -1))
         ) {
 
         collision = true;
@@ -560,7 +592,7 @@ function ballRectCollisionVert (ball, rect, length, width) {
 function detectPaddle () {
 
     if (ballRectCollision(ball, paddle, paddleLength, paddleWidth)) {
-        ball.vy = -ball.vy * bounceAccel;
+        ball.vy = -1 * ball.vy * bounceAccel;
         ball.vx += paddle.vx * paddleInfluence;
         // console.log("Ball is colliding with paddle...")
     }
@@ -576,7 +608,7 @@ function detectBlock (block) {
         // console.log("Ball is colliding with block horizontal plane...")
     }
 
-    else if (ballRectCollisionVert(ball, block, blockLength, blockWidth)) {
+    if (ballRectCollisionVert(ball, block, blockLength, blockWidth)) {
         ball.vx = -ball.vx;
         hit = true;
         // console.log("Ball is colliding with block vertical plane...")
@@ -699,7 +731,6 @@ function update () {
 
     if (won(blocks)) {
         nextLevel(1);       // advance 1 level
-        pauseGame();
     }
 
     // paddle.vx = calculateVelocity(frames);
@@ -722,8 +753,11 @@ function anyVisible (sprites) {
 function calculateVelocity (frames) {
     var vel = 0;
 
+    // add latest X pos and remove the oldest one
     previousXPositions.push(paddle.x);
-
+    if (previousXPositions.length > frames) {
+        previousXPositions.shift();
+    }
 
     return vel;
 }
